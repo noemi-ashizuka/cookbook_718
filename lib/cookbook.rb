@@ -22,11 +22,22 @@ class Cookbook
     save_csv
   end
 
+  def mark_as_done(index)
+    recipe = @recipes[index]
+    recipe.mark_unmark!
+    save_csv
+  end
+
   private
 
   def load_csv
-    CSV.foreach(@csv_file) do |row|
-      @recipes << Recipe.new(row[0], row[1])
+    csv_options = { headers: :first_row, header_converters: :symbol }
+    CSV.foreach(@csv_file, csv_options) do |attributes|
+      # we need to change the string from the csv file to the actual data we need (except for strings)
+      # "true" == "true" => true
+      # "false" == "true" => false
+      attributes[:done] = attributes[:done] == "true"
+      @recipes << Recipe.new(attributes)
     end
   end
 
@@ -34,8 +45,9 @@ class Cookbook
     csv_options = { col_sep: ',', force_quotes: true, quote_char: '"' }
 
     CSV.open(@csv_file, 'wb', csv_options) do |csv|
+      csv << ['name', 'description', 'rating', 'prep_time', 'done']
       @recipes.each do |instance|
-        csv << [instance.name, instance.description]
+        csv << [instance.name, instance.description, instance.rating, instance.prep_time, instance.done?]
       end
     end
   end
